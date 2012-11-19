@@ -1,0 +1,66 @@
+<html>
+  <head>
+    <style>
+      html, body {
+        width:  100%;
+        height: 100%;
+        margin: 0px;
+        overflow: hidden
+      }
+      #status_info {
+        position: absolute ;
+        top: 1em ;
+        left: 1em ;
+      }
+      #clicks {
+        border: 1px solid black ;
+      }
+      #blob {
+        display: none ;
+      }
+    </style>
+  </head>
+  <body onresize="resize()">
+    <div id="status_info">Not connected</div>
+    <canvas id="clicks"></canvas>
+    <img src="blob.png" id="blob"/>
+  </body>
+  <script src='js3rdparty/sockjs-0.2.1.min.js'></script>
+  <script src='js/vertxbus.js'></script>
+  <script type="text/javascript">
+
+// Get our canvas and a blob image
+var ctx = document.getElementById( 'clicks' ).getContext("2d") ;
+var img = document.getElementById( 'blob' ) ;
+
+// Keep canvas in-line with screen size HACKY :-(
+var resize = function() {
+  ctx.canvas.width = window.innerWidth ;
+  ctx.canvas.height = window.innerHeight ;
+} ;
+
+// Connect to the event bus
+var eb = new vertx.EventBus(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/eventbus');
+
+// When connected
+eb.onopen = function() {
+  document.getElementById( 'status_info' ).innerText = 'Connected' ;
+  resize() ;
+  // Register a handler for the 'clicker' address to draw an image to the canvas
+  eb.registerHandler( 'clicker', function( data ) {
+    ctx.drawImage( img, data.x, data.y ) ;
+  } ) ;
+} ;
+eb.onclose = function() {
+  document.getElementById( 'status_info' ).innerText = 'Not connected' ;
+  eb = null;
+};
+// If you click the canvas
+ctx.canvas.onclick = function( e ) {
+  if( eb ) {
+    // Publish the click to the 'clicker address'
+    eb.publish( 'clicker', { x: e.pageX, y:e.pageY }, function( reply ) {} ) ;
+  }
+} ;
+  </script>
+</html>
