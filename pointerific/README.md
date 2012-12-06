@@ -1,4 +1,4 @@
-## clickstorm
+## pointerific
 
 Connecting browsers with minimal code.
 
@@ -14,13 +14,12 @@ Tested with Vert.x v1.3.0.final, and Chrome or Safari
 Each browser registers itself as a handler for `pointer` addressed events.
 
 Each time requestanimationframe is called, the user sends their current mouse location
-to the address `update` in the following form: `{ id:guid, x: xpos, y: ypos }`
+to the address `update` in the following form: `{ uid:guid, x: xpos, y: ypos }`
 
-The server gets this message, appends the current time as a long to it, and stores it
-in an internal `Map<GUID,pos>`.
+The server gets this message, keeps it in a LRU map with a 10 second eviction policy.
 
-Every 100 ms, the server filters the map, (removing entries over 10s old), and sends this
-resultant map to the `pointer` address.
+Every so often, 100 ms, the server sends the current list of pointer locations to the
+`pointer` address.
 
 Browsers update cursors on screen each time this message is recieved.
 
