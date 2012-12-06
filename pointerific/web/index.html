@@ -1,0 +1,108 @@
+<html>
+  <head>
+    <link href='http://fonts.googleapis.com/css?family=Anaheim' rel='stylesheet' type='text/css'>
+    <style>
+      html, body {
+        width   : 100%;
+        height  : 100%;
+        overflow: hidden ;
+        cursor  : none ;
+        font-family: 'Anaheim', sans-serif;
+        color: #AAA ;
+        font-variant: small-caps ;
+      }
+      #status_info {
+        position: absolute ;
+        bottom  : 1em ;
+        right   : 1em ;
+      }
+      #description {
+        font-size: 3em ;
+      }
+      #description p {
+      }
+      div.cursor {
+        position : absolute ;
+        display  : inline-block ;
+        width    : 50px ;
+        height   : 50px ;
+        background-image: url( cursor2.png ) ;
+      }
+      </style>
+  </head>
+  <body>
+    <div id="status_info">Not connected</div>
+    <div id="description">
+      <h2>vertx-pointers</h2>
+      <p>
+        Each pointer you see is a different person moving their mouse.
+      </p>
+      <p>
+        The browser (each animation frame) writes the mouse location to the EventBus.
+      </p>
+      <p>
+        This is picked up by the server, which stores these locations in an LRU
+        cache with a max-size of 100 and a 10 second eviction policy.
+      </p>
+      <p>
+        Every so often if it has updated, the cache is sent to the browsers where
+        D3.js is used to move the cursor div objects around.
+      </p>
+    </div>
+  </body>
+  <script src='js3rdparty/d3.v2.js'></script>
+  <script src='js3rdparty/rAF.js'></script>
+  <script src='js3rdparty/sockjs-0.2.1.min.js'></script>
+  <script src='js/vertxbus.js'></script>
+  <script type="text/javascript">
+// Connect to the event bus
+var uid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,function(a,b){return b=Math.random()*16,(a=="y"?b&3|8:b|0).toString(16)}) ;
+var eb = new vertx.EventBus(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/eventbus');
+var open = false ;
+var cursorList = { elements:[] } ;
+var currentLocation = { x:0, y:0 } ;
+
+document.body.onmousemove = function( e ) {
+  currentLocation = { uid:uid, x:e.pageX, y:e.pageY } ;
+}
+
+// When connected
+eb.onopen = function() {
+  document.getElementById( 'status_info' ).innerText = 'Connected' ;
+  // Register a handler for the 'update' address
+  eb.registerHandler( 'pointer', function( data ) {
+    cursorList = data ;
+  } ) ;
+  open = true ;
+} ;
+
+eb.onclose = function() {
+  open = false ;
+  document.getElementById( 'status_info' ).innerText = 'Not connected' ;
+  eb = null;
+};
+
+requestAnimationFrame( animate );
+
+// Main loop
+function animate() {
+  requestAnimationFrame( animate );
+
+  // send our location to the server
+  if( open ) {
+    eb.send( 'update', currentLocation, function( reply ) {} ) ;
+  }
+
+  // use d3 to update mouse divs
+  var feature = d3.select( document.body )
+                  .selectAll( 'div.cursor' )
+                  .data( cursorList.elements, function( d ) { return d.uid ; } )
+                    .attr( 'style', function( d ) { return 'left: ' + d.x + ' ; top : ' + d.y + ';' } ) ;
+  feature.enter()
+         .append( 'div' )
+           .attr( 'class', 'cursor' )
+           .attr( 'style', function( d ) { return 'left: ' + d.x + ' ; top : ' + d.y + ';' } )
+  feature.exit().remove() ;
+}
+  </script>
+</html>
