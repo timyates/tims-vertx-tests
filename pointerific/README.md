@@ -23,3 +23,7 @@ Every 100 ms, the server filters the map, (removing entries over 10s old), and s
 resultant map to the `pointer` address.
 
 Browsers update cursors on screen each time this message is recieved.
+
+# Demo
+
+See http://vertx-pointers.herokuapp.com/
