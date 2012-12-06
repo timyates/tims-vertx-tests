@@ -26,6 +26,7 @@
         display  : inline-block ;
         width    : 50px ;
         height   : 50px ;
+        opacity  : 0.0 ;
         background-image: url( cursor2.png ) ;
       }
       </style>
@@ -61,6 +62,7 @@ var eb = new vertx.EventBus(window.location.protocol + '//' + window.location.ho
 var open = false ;
 var cursorList = { elements:[] } ;
 var currentLocation = { x:0, y:0 } ;
+var lastLocation = { x:0, y:0 } ;
 
 document.body.onmousemove = function( e ) {
   currentLocation = { uid:uid, x:e.pageX, y:e.pageY } ;
@@ -89,20 +91,33 @@ function animate() {
   requestAnimationFrame( animate );
 
   // send our location to the server
-  if( open ) {
+  if( open && ( lastLocation.x != currentLocation.x || lastLocation.y != currentLocation.y ) ) {
+    lastLocation = currentLocation ;
     eb.send( 'update', currentLocation, function( reply ) {} ) ;
   }
 
   // use d3 to update mouse divs
   var feature = d3.select( document.body )
                   .selectAll( 'div.cursor' )
-                  .data( cursorList.elements, function( d ) { return d.uid ; } )
-                    .attr( 'style', function( d ) { return 'left: ' + d.x + ' ; top : ' + d.y + ';' } ) ;
+                  .data( cursorList.elements, function( d ) { return d.uid ; } ) ;
+
+  feature.style( 'left', function( d ) { return d.x + 'px' ; } )
+         .style( 'top', function( d ) { return d.y + 'px' ; } )
+ 
   feature.enter()
          .append( 'div' )
            .attr( 'class', 'cursor' )
-           .attr( 'style', function( d ) { return 'left: ' + d.x + ' ; top : ' + d.y + ';' } )
-  feature.exit().remove() ;
+           .style( 'left', function( d ) { return '' + d.x + 'px' ; } )
+           .style( 'top', function( d ) { return '' + d.y + 'px' ; } )
+           .transition()
+             .duration( 500 )
+             .style( 'opacity', 1 ) ;
+
+  feature.exit()
+         .transition()
+         .duration( 500 )
+         .style( 'opacity', 1e-6 )
+         .remove() ;
 }
   </script>
 </html>
